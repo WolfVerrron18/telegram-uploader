@@ -2,10 +2,12 @@ import express from 'express';
 import dotenv from 'dotenv';
 import axios from 'axios';
 import FormData from 'form-data';
+import cors from 'cors'
 
 dotenv.config();
 
 const app = express();
+app.use(cors())
 const port = process.env.PORT || 3000;
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
