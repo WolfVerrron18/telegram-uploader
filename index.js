@@ -5,6 +5,7 @@ import puppeteer from 'puppeteer'
 import axios from 'axios'
 import cors from 'cors'
 import FormData from 'form-data'
+import * as process from "process";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
