@@ -5,6 +5,7 @@ import puppeteer from 'puppeteer'
 import axios from 'axios'
 import cors from 'cors'
 import FormData from 'form-data'
+import * as process from "process";
 
 const app = express();
 app.use(cors())
@@ -30,15 +31,19 @@ app.post('/upload', async (req, res) => {
         const browser = await puppeteer.launch({ headless: 'new' });
         const page = await browser.newPage();
         await page.setContent(content, { waitUntil: 'networkidle0' });
-
-        await page.screenshot({ path: screenshotPath, fullPage: true });
+        await page.screenshot({ path: screenshotPath });
         await browser.close();
 
         // 📤 Отправка в Telegram
         const formData = new FormData();
+        const buffer = fs.readFileSync(screenshotPath); // ← Получаем Buffer
+
+        const filename = path.basename(screenshotPath); // ← Имя файла
+
         formData.append('chat_id', process.env.CHAT_ID);
-        formData.append('caption', '🖼 Скриншот HTML-страницы');
-        formData.append('photo', fs.createReadStream(screenshotPath));
+        formData.append('caption', '📎 Скриншот HTML');
+        formData.append('photo', buffer, filename); // ← Передаём как буфер с именем
+
 
         await axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendPhoto`, formData, {
             headers: formData.getHeaders(),
