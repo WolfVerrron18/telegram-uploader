@@ -1,49 +1,56 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import axios from 'axios';
-import FormData from 'form-data';
+import express from 'express'
+import fs from "fs";
+import path from "path";
+import puppeteer from 'puppeteer'
+import axios from 'axios'
 import cors from 'cors'
-
-dotenv.config();
+import FormData from 'form-data'
 
 const app = express();
 app.use(cors())
-const port = process.env.PORT || 3000;
+const PORT = 3000;
 
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const CHAT_ID = process.env.CHAT_ID;
 
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 app.post('/upload', async (req, res) => {
+    const { filename, content } = req.body;
+
+    if (!filename || !content) {
+        return res.status(400).send('❌ Missing filename or content');
+    }
+
+    const screenshotsDir = path.dirname('screenshots');
+    if (!fs.existsSync(screenshotsDir)) fs.mkdirSync(screenshotsDir);
+
+    const timestamp = Date.now();
+    const screenshotPath = path.join(screenshotsDir, `${timestamp}-${filename.replace(/\.html$/, '')}.png`);
+
     try {
-        const base64Image = req.body.image;
+        const browser = await puppeteer.launch({ headless: 'new' });
+        const page = await browser.newPage();
+        await page.setContent(content, { waitUntil: 'networkidle0' });
 
-        if (!base64Image) {
-            return res.status(400).json({ error: 'No image provided' });
-        }
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+        await browser.close();
 
-        const buffer = Buffer.from(base64Image.split(',')[1], 'base64');
+        // 📤 Отправка в Telegram
+        const formData = new FormData();
+        formData.append('chat_id', process.env.CHAT_ID);
+        formData.append('caption', '🖼 Скриншот HTML-страницы');
+        formData.append('photo', fs.createReadStream(screenshotPath));
 
-        const form = new FormData();
-        form.append('chat_id', CHAT_ID);
-        form.append('photo', buffer, { filename: 'screenshot.jpg' });
-
-        await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, form, {
-            headers: form.getHeaders(),
+        await axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendPhoto`, formData, {
+            headers: formData.getHeaders(),
         });
 
-        res.json({ success: true, message: 'Image sent to Telegram' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error sending to Telegram' });
+        res.send('✅ Скриншот отправлен в Telegram!');
+    } catch (err) {
+        console.error('❌ Ошибка:', err);
+        res.status(500).send('Ошибка при создании или отправке скриншота');
     }
 });
 
-app.get('/', (req, res) => {
-    res.send('Server is running');
-});
-
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+app.listen(PORT, () => {
+    console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
 });
