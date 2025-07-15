@@ -7,10 +7,9 @@ import cors from 'cors'
 import FormData from 'form-data'
 
 const app = express();
+const PORT = 8080;
+
 app.use(cors())
-const PORT = 3000;
-
-
 app.use(express.json({ limit: '10mb' }));
 
 app.post('/upload', async (req, res) => {
