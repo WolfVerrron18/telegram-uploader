@@ -54,6 +54,10 @@ app.post('/upload', async (req, res) => {
     }
 });
 
+app.get('/', (req, res) => {
+    res.send('✅ Скриншот отправлен в Telegram!');
+})
+
 app.listen(PORT, () => {
     console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
 });
